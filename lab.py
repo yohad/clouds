@@ -1,7 +1,9 @@
 """
 This script contains tests that we did on the data
 """
-from dataloader import get_combined_png
+from torch import optim
+
+from dataloader import get_combined_epoch_png
 from model import create_nn_v1
 import torch
 
@@ -10,22 +12,31 @@ from tqdm import tqdm
 from torchsummary import summary
 
 
-def train(model, data, size=1000, batch=32):
-    criterion = torch.nn.CrossEntropyLoss()
-    optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
-    # test_results =
-    for i, (image, label) in enumerate(data):
-        image, label = image.cuda(), label.cuda()
-        # summary(model, image)
-        outputs = model(image)
-        loss = criterion(outputs, label)
-        print(f"[{(i+1) * batch}\{size}] | Loss: {loss.item():.4f} | "
-              f"label {list(map(float, label[0]))} | {list(map(float, outputs[0]))}")
-        loss.backward()
-        optimizer.step()
+USE_CUDA = True
 
-        if i*batch > size:
-            break
+
+def train(model, data_path, epochs=50, batch_size=32):
+    criterion = torch.nn.CrossEntropyLoss()
+    optimizer = optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
+    results = {}
+
+    for epoch_index in range(epochs):
+        data = get_combined_epoch_png(data_path, train=True, batch_size=batch_size)
+        for batch_index, (image, label) in enumerate(data):
+            if USE_CUDA:
+                image, label = image.cuda(), label.cuda()
+            optimizer.zero_grad()
+
+            # summary(model, image)
+            outputs = model(image)
+            loss = criterion(outputs, label)
+            loss.backward()
+            optimizer.step()
+
+        print(f"[{epoch_index}\{epochs}] | Loss: {loss.item():.4f}")
+        results[epoch_index] = {"loss": loss.item()}
+
+    return results
 
 
 def test(model, data):
@@ -36,9 +47,9 @@ def simple_run(dataset_path):
     model = create_nn_v1()
 
     model.train()
-    train_set = get_combined_png(dataset_path, train=True)
-    train(model, train_set)
+    results = train(model, "D:/Clouds/YotamDataSet/96x96_32x32", epochs=100)
+    print(results)
 
     model.eval()
-    test_set = get_combined_png(dataset_path, train=False)
+    test_set = get_combined_epoch_png(dataset_path, train=False)
     test(model, test_set)

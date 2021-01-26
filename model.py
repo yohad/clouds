@@ -38,8 +38,12 @@ def create_nn_v1():
 
         torch.nn.Flatten(),
 
-        torch.nn.Linear(1152, 100),
-        torch.nn.Linear(100, 5),
-        torch.nn.Softmax(1)
+        torch.nn.Linear(1152, 128),
+
+        torch.nn.ReLU(),
+
+        torch.nn.Linear(128, 32),
+        torch.nn.ReLU(),
+        torch.nn.Linear(32, 5)
     )
     return model.to(_get_device())

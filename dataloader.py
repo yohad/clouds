@@ -32,7 +32,7 @@ def grouper(iterable, n, fillvalue=None):
     return zip_longest(*args, fillvalue=fillvalue)
 
 
-def get_combined_png(data_path, train=True, batch_size=32):
+def get_combined_epoch_png(data_path, train=True, batch_size=32):
     """
     Combine the VIS and IR images to a single one with the following color map (VIS, 255 - IR, 255 - IR)
     :param train: Should the images be from the Train data set or Eval dataset
@@ -47,7 +47,10 @@ def get_combined_png(data_path, train=True, batch_size=32):
     filenames = glob(glob_pattern)
     random.shuffle(filenames)
 
-    for batch in grouper(filenames, batch_size):
+    # last one can have None and it will break everything
+    epoch = list(grouper(filenames, batch_size))[:-1]
+
+    for batch in epoch:
         images, labels = [], []
         for vis_name in batch:
             vis_path = os.path.join(folder_fullpath, vis_name)
@@ -61,11 +64,9 @@ def get_combined_png(data_path, train=True, batch_size=32):
             images.append(image)
 
             label = re.search("label_(.*)_", vis_name).group(1)
-            label = int(label)
-            bool_to_int = lambda x, y: 1 if x == y else 0
-            label = np.array([bool_to_int(x, label - 1) for x in range(5)])
+            label = int(label)-1
             labels.append(label)
 
         images = torch.from_numpy(np.array(images, dtype="float32"))
-        labels = torch.from_numpy(np.array(labels, dtype="float32"))
+        labels = torch.from_numpy(np.array(labels, dtype="int64"))
         yield images, labels
